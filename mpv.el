@@ -487,12 +487,19 @@ See `mpv-start' if you need to pass further arguments and
   "Append THING to the current mpv playlist.
 
 If ARGS are provided, they are passed as per-file options to mpv."
-  (mpv-run-command "loadfile" thing "append"
-                   (string-join
-                    (mapcar (lambda (arg)
-                              (string-trim-left arg "--"))
-                            args)
-                    ","))
+  (let* ((req-idx (version<= "0.38"
+                             (replace-regexp-in-string
+                              "[^0-9.]" "" (mpv-get-property "mpv-version"))))
+         ;; mpv above 0.38.0 requires insert position
+         (opts-args (append '("append")
+                            (when req-idx '("-1"))
+                            (list
+                             (string-join
+                              (mapcar (lambda (arg)
+                                        (string-trim-left arg "--"))
+                                      args)
+                              ",")))))
+    (apply #'mpv-run-command "loadfile" thing opts-args))
   (when-let* ((count (mpv-get-property "playlist-count"))
               (index (1- count))
               (filename (mpv-get-property (format "playlist/%d/filename" index))))
